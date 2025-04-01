@@ -1,18 +1,17 @@
 // src/components/FullText.js
-import React, { useEffect, useState } from 'react';
+import React, { useLayoutEffect, useState } from 'react';
 import api from '../api';
 
 function FullText({ pmcid, source }) {
   const [content, setContent] = useState('');
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const fetchContent = async () => {
       if (!pmcid) {
         setContent('No full text available.');
         return;
       }
       try {
-        // PMC/PM 논문은 pmc_full_text_html API를 호출
         const res = await api.get(`/paper/pmc_full_text_html`, {
           params: { pmcid }
         });
