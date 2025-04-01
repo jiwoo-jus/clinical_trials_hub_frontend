@@ -132,7 +132,7 @@ function StructuredInfo({ pmcid, structuredInfo: preloadedStructuredInfo }) {
           nodeKey={key}
           data={value}
           depth={0}
-          defaultExpandDepth={3}
+          defaultExpandDepth={2}
         />
       ))}
     </div>

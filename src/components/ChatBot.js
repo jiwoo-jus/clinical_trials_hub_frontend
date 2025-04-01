@@ -9,7 +9,7 @@ function copyToClipboard(text) {
     .catch(err => console.error("Copy failed", err));
 }
 
-const ChatMessage = ({ message, isLatest, onToggle }) => {
+const ChatMessage = ({ message, onToggle }) => {
   const handleCopyAll = () => {
     const allText = `Q: ${message.question}\nA: ${message.answer}${
       message.evidence && message.evidence.length > 0
@@ -36,9 +36,9 @@ const ChatMessage = ({ message, isLatest, onToggle }) => {
         </button>
       </div>
 
-      {isLatest || message.expanded ? (
+      {/* A 및 Evidence 영역 */}
+      {message.expanded ? (
         <>
-          {/* A 영역 */}
           <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '4px' }}>
             <strong style={{ marginRight: '4px' }}>A:</strong>
             <div style={{ flex: 1, whiteSpace: 'pre-wrap' }}>
@@ -52,8 +52,6 @@ const ChatMessage = ({ message, isLatest, onToggle }) => {
               copy
             </button>
           </div>
-
-          {/* Evidence 영역 */}
           {message.evidence && message.evidence.length > 0 && (
             <div style={{ marginTop: '4px' }}>
               <strong>Evidence:</strong>
@@ -82,12 +80,10 @@ const ChatMessage = ({ message, isLatest, onToggle }) => {
         </div>
       )}
 
-      {/* 과거 메시지는 접었다/펼칠 수 있도록 토글 버튼 */}
-      {!isLatest && (
-        <button onClick={onToggle} style={{ marginTop: '4px' }}>
-          {message.expanded ? 'Collapse' : 'Expand'}
-        </button>
-      )}
+      {/* 토글 버튼은 최신 메시지 포함 모든 메시지에 표시 */}
+      <button onClick={onToggle} style={{ marginTop: '4px' }}>
+        {message.expanded ? 'Collapse' : 'Expand'}
+      </button>
 
       {/* 전체 복사 버튼 (질문+답변+근거) */}
       <button className="copy-button" onClick={handleCopyAll} style={{ marginTop: '4px' }}>
@@ -98,7 +94,6 @@ const ChatMessage = ({ message, isLatest, onToggle }) => {
 };
 
 function ChatBot({ paperId, data }) {
-  // 대화 내역
   const [question, setQuestion] = useState('');
   const [conversation, setConversation] = useState([]);
 
@@ -109,12 +104,11 @@ function ChatBot({ paperId, data }) {
         ? { content: data, userQuestion: question }
         : { paperId, userQuestion: question };
       const response = await api.post('/chat', payload);
-
       const newMessage = {
         question: question,
         answer: response.data.answer,
         evidence: response.data.evidence || [],
-        expanded: true, // 최신 메시지는 기본적으로 펼쳐짐
+        expanded: true, // 새 메시지는 기본적으로 펼쳐짐
       };
       setConversation([...conversation, newMessage]);
       setQuestion('');
@@ -133,19 +127,18 @@ function ChatBot({ paperId, data }) {
 
   return (
     <div>
-      {/* 누적 대화 출력 */}
+      {/* 대화 내역 출력 */}
       <div>
         {conversation.map((msg, index) => (
           <ChatMessage
             key={index}
             message={msg}
-            isLatest={index === conversation.length - 1}
             onToggle={() => toggleMessage(index)}
           />
         ))}
       </div>
 
-      {/* 질문 입력 */}
+      {/* 새 질문 입력 */}
       <input
         type="text"
         placeholder="Ask a question about this paper..."
