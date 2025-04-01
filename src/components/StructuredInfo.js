@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import api from '../api';
-import './StructuredInfo.css'; // CSS 파일을 임포트
+import './StructuredInfo.css'; // CSS 파일 임포트
 
 // 재귀적으로 JSON 트리를 렌더링하는 컴포넌트
 const FoldableNode = ({ nodeKey, data, depth, defaultExpandDepth }) => {
   const isObject = data !== null && typeof data === 'object';
   const isArray = Array.isArray(data);
-  // 기본적으로 depth가 defaultExpandDepth 미만이면 펼쳐지도록 함
+  // 기본적으로 depth가 defaultExpandDepth 미만이면 펼쳐지도록 함 (예: defaultExpandDepth=2이면 depth 0, 1는 펼쳐지고, 2 이상은 접힘)
   const [expanded, setExpanded] = useState(depth < defaultExpandDepth);
 
   const toggle = () => {
@@ -14,7 +14,7 @@ const FoldableNode = ({ nodeKey, data, depth, defaultExpandDepth }) => {
   };
 
   const handleCopy = () => {
-    // 현재 노드(자신 포함 하위 내용) 전체를 복사
+    // 자신 포함 하위 내용을 복사: { key: data } 형태의 JSON 문자열 생성
     const jsonObj = { [nodeKey]: data };
     const jsonStr = JSON.stringify(jsonObj, null, 2);
     navigator.clipboard.writeText(jsonStr)
@@ -22,10 +22,18 @@ const FoldableNode = ({ nodeKey, data, depth, defaultExpandDepth }) => {
       .catch(err => console.error("Copy failed", err));
   };
 
+  // 노드 컨테이너 스타일: 깊이에 따라 들여쓰기와 왼쪽 선이 적용됨
+  const containerStyle = {
+    marginLeft: depth * 16,
+    borderLeft: '2px solid #666',
+    paddingLeft: 8,
+    marginTop: 4,
+  };
+
   // Leaf 노드인 경우
   if (!isObject) {
     return (
-      <div style={{ marginLeft: depth * 16, display: 'flex', alignItems: 'center' }}>
+      <div style={containerStyle} className="foldable-node">
         <span><strong>{nodeKey}:</strong> {data.toString()}</span>
         <button className="copy-button" onClick={handleCopy}>copy</button>
       </div>
@@ -34,9 +42,9 @@ const FoldableNode = ({ nodeKey, data, depth, defaultExpandDepth }) => {
 
   // 객체나 배열인 경우
   return (
-    <div style={{ marginLeft: depth * 16, borderLeft: '1px dotted #ccc', paddingLeft: 8 }}>
+    <div style={containerStyle} className="foldable-node">
       <div style={{ display: 'flex', alignItems: 'center' }}>
-        <span onClick={toggle} style={{ cursor: 'pointer', userSelect: 'none' }}>
+        <span onClick={toggle} style={{ cursor: 'pointer', userSelect: 'none', flex: 1 }}>
           {expanded ? '▼' : '▶'} <strong>{nodeKey}</strong>:
         </span>
         <button className="copy-button" onClick={handleCopy}>copy</button>
@@ -117,8 +125,8 @@ function StructuredInfo({ pmcid }) {
         <button className="copy-button" onClick={handleCopyAll}>copy</button>
       </div>
       {Object.entries(info).map(([key, value]) => (
-        // defaultExpandDepth를 2로 설정: depth 0과 1은 펼쳐지고, depth 2 이상은 접힘
-        <FoldableNode key={key} nodeKey={key} data={value} depth={0} defaultExpandDepth={2} />
+        // defaultExpandDepth=1: 깊이 0은 기본적으로 펼쳐지고, 1 이상은 접힘
+        <FoldableNode key={key} nodeKey={key} data={value} depth={0} defaultExpandDepth={1} />
       ))}
     </div>
   );

@@ -1,14 +1,18 @@
 .copy-button {
-    background: none;
-    border: none;
-    color: #ccc;
-    cursor: pointer;
-    font-size: 1em;
-    margin-left: auto;
-    padding: 0;
-  }
-  
-  .copy-button:hover {
-    color: #000;
-  }
-  
+  background: none;
+  border: none;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 1em;
+  margin-left: 8px;
+  padding: 0;
+  transition: color 0.2s ease;
+}
+
+.copy-button:hover {
+  color: #000;
+}
+
+.foldable-node {
+  /* write additional styles if needed */
+}
