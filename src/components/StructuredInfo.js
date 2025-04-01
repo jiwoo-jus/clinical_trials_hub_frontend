@@ -1,20 +1,21 @@
+// src/components/StructuredInfo.js
 import React, { useEffect, useState } from 'react';
 import api from '../api';
-import './StructuredInfo.css'; // CSS 파일 임포트
+import './StructuredInfo.css';
 
-// 재귀적으로 JSON 트리를 렌더링하는 컴포넌트
+// 재귀적으로 JSON 트리를 폴딩하여 렌더링
 const FoldableNode = ({ nodeKey, data, depth, defaultExpandDepth }) => {
-  const isObject = data !== null && typeof data === 'object';
+  const isObject = data && typeof data === 'object';
   const isArray = Array.isArray(data);
-  // 기본적으로 depth가 defaultExpandDepth 미만이면 펼쳐지도록 함 (예: defaultExpandDepth=2이면 depth 0, 1는 펼쳐지고, 2 이상은 접힘)
-  const [expanded, setExpanded] = useState(depth < defaultExpandDepth);
 
-  const toggle = () => {
-    setExpanded(!expanded);
-  };
+  // 사용자 입장에서 depth 0 -> 레벨1, depth 1 -> 레벨2
+  const level = depth + 1;
+  // level이 defaultExpandDepth 미만이면 펼쳐진 상태로
+  const [expanded, setExpanded] = useState(level < defaultExpandDepth);
+
+  const toggle = () => setExpanded(!expanded);
 
   const handleCopy = () => {
-    // 자신 포함 하위 내용을 복사: { key: data } 형태의 JSON 문자열 생성
     const jsonObj = { [nodeKey]: data };
     const jsonStr = JSON.stringify(jsonObj, null, 2);
     navigator.clipboard.writeText(jsonStr)
@@ -22,25 +23,29 @@ const FoldableNode = ({ nodeKey, data, depth, defaultExpandDepth }) => {
       .catch(err => console.error("Copy failed", err));
   };
 
-  // 노드 컨테이너 스타일: 깊이에 따라 들여쓰기와 왼쪽 선이 적용됨
+  // 폰트 크기: level 1 -> 1.3em, 2 -> 1.2em, 3 -> 1.1em, 4이상 -> 1em
+  const computedFontSize = level < 4 ? `${1.4 - level * 0.1}em` : '1em';
   const containerStyle = {
     marginLeft: depth * 16,
     borderLeft: '2px solid #666',
     paddingLeft: 8,
+    // fontSize: computedFontSize,
     marginTop: 4,
   };
 
-  // Leaf 노드인 경우
+  // Leaf 노드: string/number 등
   if (!isObject) {
     return (
       <div style={containerStyle} className="foldable-node">
-        <span><strong>{nodeKey}:</strong> {data.toString()}</span>
+        <span style={{ whiteSpace: 'pre-wrap' }}>
+          <strong>{nodeKey}:</strong> {data?.toString()}
+        </span>
         <button className="copy-button" onClick={handleCopy}>copy</button>
       </div>
     );
   }
 
-  // 객체나 배열인 경우
+  // 객체/배열 노드
   return (
     <div style={containerStyle} className="foldable-node">
       <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -52,10 +57,10 @@ const FoldableNode = ({ nodeKey, data, depth, defaultExpandDepth }) => {
       {expanded && (
         <div>
           {isArray ? (
-            data.map((item, index) => (
+            data.map((item, i) => (
               <FoldableNode
-                key={index}
-                nodeKey={index.toString()}
+                key={i}
+                nodeKey={i.toString()}
                 data={item}
                 depth={depth + 1}
                 defaultExpandDepth={defaultExpandDepth}
@@ -78,26 +83,23 @@ const FoldableNode = ({ nodeKey, data, depth, defaultExpandDepth }) => {
   );
 };
 
-function StructuredInfo({ pmcid }) {
-  const [info, setInfo] = useState(null);
+function StructuredInfo({ pmcid, structuredInfo: preloadedStructuredInfo }) {
+  const [info, setInfo] = useState(preloadedStructuredInfo || null);
 
   useEffect(() => {
-    const fetchInfo = async () => {
-      if (!pmcid) {
-        setInfo({ error: 'No structured info available.' });
-        return;
-      }
-      try {
-        const res = await api.get(`/paper/structured_info`, {
-          params: { pmcid }
-        });
-        setInfo(res.data.structured_info);
-      } catch (error) {
-        console.error('Error fetching structured info:', error);
-      }
-    };
-    fetchInfo();
-  }, [pmcid]);
+    // CTG인 경우 이미 structuredInfo가 있으므로 API 호출 불필요
+    if (!preloadedStructuredInfo && pmcid) {
+      const fetchInfo = async () => {
+        try {
+          const res = await api.get(`/paper/structured_info`, { params: { pmcid } });
+          setInfo(res.data.structured_info);
+        } catch (error) {
+          console.error('Error fetching structured info:', error);
+        }
+      };
+      fetchInfo();
+    }
+  }, [pmcid, preloadedStructuredInfo]);
 
   const handleCopyAll = () => {
     const jsonStr = JSON.stringify(info, null, 2);
@@ -125,8 +127,13 @@ function StructuredInfo({ pmcid }) {
         <button className="copy-button" onClick={handleCopyAll}>copy</button>
       </div>
       {Object.entries(info).map(([key, value]) => (
-        // defaultExpandDepth=1: 깊이 0은 기본적으로 펼쳐지고, 1 이상은 접힘
-        <FoldableNode key={key} nodeKey={key} data={value} depth={0} defaultExpandDepth={1} />
+        <FoldableNode
+          key={key}
+          nodeKey={key}
+          data={value}
+          depth={0}
+          defaultExpandDepth={3}
+        />
       ))}
     </div>
   );
