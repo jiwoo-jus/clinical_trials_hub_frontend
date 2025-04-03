@@ -1,28 +1,40 @@
-// src/components/SearchBar.js
 import React, { useState } from 'react';
 import api from '../api';
 
 function formatRefinedQuery(refinedQuery) {
-  // refinedQuery가 객체라면 지정된 형식으로 JSX 반환
   return (
     <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.5em' }}>
-      <div><strong>• P (Patient, Problem, or Population):</strong> {refinedQuery.P}</div>
-      <div><strong>• I (Intervention):</strong> {refinedQuery.I}</div>
-      <div><strong>• C (Comparison):</strong> {refinedQuery.C}</div>
-      <div><strong>• O (Outcome):</strong> {refinedQuery.O}</div>
-      <div><strong>• Query:</strong> {refinedQuery.query}</div>
+      <div><strong>• Condition/Disease:</strong> {refinedQuery["cond"]}</div>
+      <div><strong>• Intervention/Treatment:</strong> {refinedQuery["intr"]}</div>
+      <div><strong>• Other Terms:</strong> {refinedQuery["other_term"]}</div>
+      {/* {refinedQuery.combined_query && (
+        <div><strong>• Combined Query:</strong> {refinedQuery.combined_query}</div>
+      )} */}
     </div>
   );
 }
 
 function SearchBar({ onResults }) {
-  const [query, setQuery] = useState('');
+  const [userQuery, setQuery] = useState('');
+  const [condition, setCondition] = useState('');
+  const [intervention, setIntervention] = useState('');
   const [refinedQueryLocal, setRefinedQueryLocal] = useState('');
+  const [advancedVisible, setAdvancedVisible] = useState(false);
+
+  const toggleAdvanced = () => {
+    setAdvancedVisible(!advancedVisible);
+  };
 
   const handleSearch = async () => {
     try {
-      const response = await api.post('/search', { userQuery: query });
-      // Response: { refinedQuery, results }
+      // 사용자 입력을 "other_term", "cond", "intr"로 구성하여 payload에 담습니다.
+      const payload = {
+        other_term: userQuery,
+        cond: condition,
+        intr: intervention
+      };
+      const response = await api.post('/search', payload);
+      // 응답 형식: { refinedQuery, results }
       const { refinedQuery, results } = response.data;
       setRefinedQueryLocal(refinedQuery);
       onResults(refinedQuery, results);
@@ -36,13 +48,12 @@ function SearchBar({ onResults }) {
   const handleCopy = () => {
     let textToCopy;
     if (typeof refinedQueryLocal === 'object') {
-      // 객체인 경우, 포맷된 텍스트로 변환
       textToCopy =
-        `• P (Patient, Problem, or Population): ${refinedQueryLocal.P}\n` +
-        `• I (Intervention): ${refinedQueryLocal.I}\n` +
-        `• C (Comparison): ${refinedQueryLocal.C}\n` +
-        `• O (Outcome): ${refinedQueryLocal.O}\n` +
-        `• Query: ${refinedQueryLocal.query}`;
+        `• Condition/Disease: ${refinedQueryLocal["cond"]}\n`
+        + `• Intervention/Treatment: ${refinedQueryLocal["intr"]}\n`
+        + `• Other Terms: ${refinedQueryLocal["other_term"]}\n`
+        // +(refinedQueryLocal.combined_query ? `• Combined Query: ${refinedQueryLocal.combined_query}` : "")
+        ;
     } else {
       textToCopy = refinedQueryLocal;
     }
@@ -53,23 +64,51 @@ function SearchBar({ onResults }) {
 
   return (
     <div style={{ marginBottom: '1rem' }}>
-      <input
-        type="text"
-        placeholder="Enter clinical trial query..."
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        style={{ width: '300px' }}
-      />
-      <button onClick={handleSearch}>Search</button>
-      {refinedQueryLocal && (
+      {/* 메인 검색 입력 (우선 노출) */}
+      <div>
+        <input
+          type="text"
+          placeholder="What clinical trial paper are you looking for?"
+          value={userQuery}
+          onChange={(e) => setQuery(e.target.value)}
+          style={{ width: '300px', marginBottom: '4px' }}
+        />
+        <button onClick={handleSearch}>Search</button>
+      </div>
+      {/* Advanced Search (Optional) 섹션 토글 */}
+      <div style={{ marginTop: '8px' }}>
+        <button onClick={toggleAdvanced}>
+          {advancedVisible ? 'Hide Advanced Search' : 'Show Advanced Search'}
+        </button>
+      </div>
+      {advancedVisible && (
         <div style={{ marginTop: '8px' }}>
-          <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Refined Query:</div>
+          <input
+            type="text"
+            placeholder="Condition or disease"
+            value={condition}
+            onChange={(e) => setCondition(e.target.value)}
+            style={{ width: '300px', marginBottom: '4px' }}
+          />
+          <input
+            type="text"
+            placeholder="Intervention or treatment"
+            value={intervention}
+            onChange={(e) => setIntervention(e.target.value)}
+            style={{ width: '300px', marginBottom: '4px' }}
+          />
+        </div>
+      )}
+      {refinedQueryLocal && (
+        <div style={{ marginTop: '16px' }}>
+          <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Refined Search:</div>
           <div>
             {typeof refinedQueryLocal === 'object'
               ? formatRefinedQuery(refinedQueryLocal)
               : <span style={{ whiteSpace: 'pre-wrap' }}>{refinedQueryLocal}</span>
             }
           </div>
+          <button onClick={handleCopy} style={{ marginTop: '4px' }}>📋 Copy</button>
         </div>
       )}
     </div>
